@@ -17,15 +17,16 @@ RUN git clone --depth 1 https://github.com/openclaw/openclaw.git . \
 
 FROM node:22-bookworm-slim
 
-# Install runtime deps + gosu
+# Install runtime deps + gnupg (for gosu verification)
 RUN apt-get update && apt-get install -y \
     git \
     curl \
     ca-certificates \
+    gnupg \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Install gosu
+# Install gosu (with GPG verification)
 RUN set -eux; \
     GOSU_VERSION=1.17; \
     dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
@@ -38,19 +39,16 @@ RUN set -eux; \
     chmod +x /usr/local/bin/gosu; \
     gosu --version
 
-# Create non‑root user (UID 1000)
 RUN groupadd -r openclaw -g 1000 && \
     useradd -r -g openclaw -u 1000 -s /bin/bash -d /app openclaw
 
 RUN mkdir -p /app /data/.openclaw /data/workspace /data/config && \
     chown -R openclaw:openclaw /app /data
 
-# Copy built application
 COPY --from=builder --chown=openclaw:openclaw /build/dist /app/dist
 COPY --from=builder --chown=openclaw:openclaw /build/package*.json /app/
 COPY --from=builder --chown=openclaw:openclaw /build/node_modules /app/node_modules
 
-# Copy scripts
 COPY --chown=openclaw:openclaw docker-entrypoint.sh /usr/local/bin/
 COPY --chown=openclaw:openclaw configurator.js /app/
 COPY --chown=openclaw:openclaw encrypt-utils.js /app/
@@ -59,7 +57,6 @@ COPY --chown=openclaw:openclaw start.sh /app/
 
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh /app/start.sh
 
-# Environment defaults
 ENV NODE_ENV=production \
     OPENCLAW_STATE_DIR=/data/.openclaw \
     OPENCLAW_WORKSPACE_DIR=/data/workspace \
@@ -71,7 +68,6 @@ ENV NODE_ENV=production \
     ENCRYPTION_KEY="" \
     AUTH_ENABLED=true
 
-# Expose only the proxy port (8080) – gateway is internal
 EXPOSE 8080
 VOLUME ["/data"]
 
