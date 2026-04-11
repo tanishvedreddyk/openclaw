@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  openclaw:
+    build: .
+    container_name: openclaw
+    ports:
+      - "8080:8080"   # only the proxy port exposed
+    environment:
+      # AI Providers (at least one)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
+      # Gateway internal (no auth inside)
+      - OPENCLAW_GATEWAY_PORT=18789
+      - OPENCLAW_GATEWAY_BIND=127.0.0.1
+      - OPENCLAW_MODELS_MODE=merge
+      - OPENCLAW_PRIMARY_MODEL=${OPENCLAW_PRIMARY_MODEL:-anthropic/claude-sonnet-4-5-latest}
+      # Web UI authentication
+      - AUTH_ENABLED=${AUTH_ENABLED:-true}
+      - WEBUI_USERNAME=${WEBUI_USERNAME:-admin}
+      - WEBUI_PASSWORD=${WEBUI_PASSWORD:-}   # REQUIRED if AUTH_ENABLED=true
+      # Encryption key (base64 encoded 32 bytes) – optional but recommended
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      # Channels
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:-}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN:-}
+    volumes:
+      - openclaw-data:/data
+      - ./config:/data/config:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Resource limits (adjust as needed)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+volumes:
+  openclaw-data:
