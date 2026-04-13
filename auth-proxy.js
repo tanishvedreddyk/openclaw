@@ -12,7 +12,35 @@ if (AUTH_ENABLED && !WEBUI_PASSWORD) {
     process.exit(1);
 }
 
+// Simple rate limiting (optional)
+const rateLimit = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 30; // 30 attempts per minute
+
+function isRateLimited(ip) {
+    const now = Date.now();
+    const record = rateLimit.get(ip) || { count: 0, reset: now + RATE_LIMIT_WINDOW };
+    if (now > record.reset) {
+        record.count = 1;
+        record.reset = now + RATE_LIMIT_WINDOW;
+        rateLimit.set(ip, record);
+        return false;
+    }
+    record.count++;
+    rateLimit.set(ip, record);
+    return record.count > RATE_LIMIT_MAX;
+}
+
 const proxy = httpProxy.createProxyServer({ target: GATEWAY_URL, changeOrigin: true });
+
+// Handle proxy errors without crashing
+proxy.on('error', (err, req, res) => {
+    console.error('Proxy error:', err.message);
+    if (!res.headersSent) {
+        res.writeHead(502, { 'Content-Type': 'text/plain' });
+        res.end('Gateway unavailable');
+    }
+});
 
 const server = http.createServer((req, res) => {
     // Health check endpoint (no auth)
@@ -23,6 +51,13 @@ const server = http.createServer((req, res) => {
     }
 
     if (AUTH_ENABLED) {
+        const ip = req.socket.remoteAddress;
+        if (isRateLimited(ip)) {
+            res.writeHead(429, { 'Content-Type': 'text/plain' });
+            res.end('Too many authentication attempts');
+            return;
+        }
+
         const authHeader = req.headers.authorization;
         if (!authHeader) {
             res.writeHead(401, {
@@ -33,8 +68,32 @@ const server = http.createServer((req, res) => {
             return;
         }
 
-        const base64 = authHeader.split(' ')[1];
-        const [user, pass] = Buffer.from(base64, 'base64').toString().split(':');
+        // Validate header format
+        const parts = authHeader.split(' ');
+        if (parts.length !== 2 || parts[0] !== 'Basic') {
+            res.writeHead(400, { 'Content-Type': 'text/plain' });
+            res.end('Malformed Authorization header');
+            return;
+        }
+
+        let decoded;
+        try {
+            decoded = Buffer.from(parts[1], 'base64').toString();
+        } catch (e) {
+            res.writeHead(400, { 'Content-Type': 'text/plain' });
+            res.end('Invalid base64 in Authorization header');
+            return;
+        }
+
+        const colonIndex = decoded.indexOf(':');
+        if (colonIndex === -1) {
+            res.writeHead(400, { 'Content-Type': 'text/plain' });
+            res.end('Missing colon in credentials');
+            return;
+        }
+
+        const user = decoded.substring(0, colonIndex);
+        const pass = decoded.substring(colonIndex + 1);
         if (user !== WEBUI_USERNAME || pass !== WEBUI_PASSWORD) {
             res.writeHead(403, { 'Content-Type': 'text/html' });
             res.end('<html><body>Invalid username or password.</body></html>');
@@ -42,11 +101,13 @@ const server = http.createServer((req, res) => {
         }
     }
 
-    // Proxy to OpenClaw gateway
     proxy.web(req, res, {}, (err) => {
-        console.error('Proxy error:', err);
-        res.writeHead(502, { 'Content-Type': 'text/plain' });
-        res.end('Gateway unavailable');
+        // This callback handles errors during proxying
+        console.error('Proxy request error:', err.message);
+        if (!res.headersSent) {
+            res.writeHead(502, { 'Content-Type': 'text/plain' });
+            res.end('Gateway unavailable');
+        }
     });
 });
 
