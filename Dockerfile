@@ -1,23 +1,25 @@
 # syntax=docker/dockerfile:1
 FROM node:22-bookworm-slim AS builder
 
+# Install build dependencies and pnpm
 RUN apt-get update && apt-get install -y \
     git \
     python3 \
     make \
     g++ \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g pnpm
 
 WORKDIR /build
 RUN git clone --depth 1 https://github.com/openclaw/openclaw.git . \
-    && npm ci \
-    && npm run build
+    && pnpm install \
+    && pnpm run build
 
 # -----------------------------------------------------------------------------
 
 FROM node:22-bookworm-slim
 
-# Install runtime deps + gnupg (for gosu verification)
+# Install runtime dependencies and gnupg for gosu verification
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -39,7 +41,7 @@ RUN set -eux; \
     chmod +x /usr/local/bin/gosu; \
     gosu --version
 
-# Rename existing 'node' group to 'openclaw' and rename user to 'openclaw'
+# Rename the existing 'node' user to 'openclaw' (UID/GID 1000 remains)
 RUN groupmod -n openclaw node && \
     usermod -d /app -s /bin/bash -l openclaw node && \
     mkdir -p /app /data/.openclaw /data/workspace /data/config && \
