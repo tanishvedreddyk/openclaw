@@ -1,17 +1,19 @@
 # syntax=docker/dockerfile:1
 FROM node:22-bookworm-slim AS builder
 
-# Install build dependencies and pnpm
+# Install build dependencies
 RUN apt-get update && apt-get install -y \
     git \
     python3 \
     make \
     g++ \
-    && rm -rf /var/lib/apt/lists/* \
-    && npm install -g pnpm
+    && rm -rf /var/lib/apt/lists/*
 
+# Pin OpenClaw to a specific version (change as needed)
+ARG OPENCLAW_VERSION=v2026.4.12
 WORKDIR /build
-RUN git clone --depth 1 https://github.com/openclaw/openclaw.git . \
+RUN git clone --depth 1 --branch ${OPENCLAW_VERSION} https://github.com/openclaw/openclaw.git . \
+    && npm install -g pnpm \
     && pnpm install \
     && pnpm run build
 
@@ -19,7 +21,7 @@ RUN git clone --depth 1 https://github.com/openclaw/openclaw.git . \
 
 FROM node:22-bookworm-slim
 
-# Install runtime dependencies and gnupg for gosu verification
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -28,20 +30,22 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Install gosu (with GPG verification)
+# Install gosu with retry for GPG keyserver
 RUN set -eux; \
     GOSU_VERSION=1.17; \
     dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
     curl -o /usr/local/bin/gosu -fSL "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
     curl -o /usr/local/bin/gosu.asc -fSL "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch.asc"; \
     export GNUPGHOME="$(mktemp -d)"; \
-    gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4; \
+    for i in 1 2 3; do \
+        gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 && break || sleep 5; \
+    done; \
     gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
     rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
     chmod +x /usr/local/bin/gosu; \
     gosu --version
 
-# Rename the existing 'node' user to 'openclaw' (UID/GID 1000 remains)
+# Rename existing 'node' user to 'openclaw'
 RUN groupmod -n openclaw node && \
     usermod -d /app -s /bin/bash -l openclaw node && \
     mkdir -p /app /data/.openclaw /data/workspace /data/config && \
@@ -73,6 +77,7 @@ ENV NODE_ENV=production \
 EXPOSE 8080
 VOLUME ["/data"]
 
+# Health check for the auth proxy (port 8080)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8080/healthz || exit 1
 
