@@ -39,7 +39,8 @@ RUN set -eux; \
     chmod +x /usr/local/bin/gosu; \
     gosu --version
 
-RUN groupadd -r openclaw -g 1000 && \
+# Create user/group – use -f to avoid failure if GID 1000 already exists
+RUN groupadd -f -r -g 1000 openclaw && \
     useradd -r -g openclaw -u 1000 -s /bin/bash -d /app openclaw
 
 RUN mkdir -p /app /data/.openclaw /data/workspace /data/config && \
