@@ -1,36 +1,46 @@
 #!/bin/bash
 set -e
 
-# Fix permissions if running as root
+# Fix permissions only if running as root and /data exists and is owned by root
 if [ "$(id -u)" = "0" ]; then
-    echo "Fixing permissions on /data (running as root)"
-    chown -R openclaw:openclaw /data
+    if [ -d "/data" ] && [ "$(stat -c %u /data)" = "0" ]; then
+        echo "Fixing permissions on /data (running as root)"
+        chown -R openclaw:openclaw /data
+    fi
     echo "Dropping privileges to openclaw user"
     exec gosu openclaw "$0" "$@"
 fi
 
 echo "Running as user: $(id -u)"
 
-# Create required directories
 mkdir -p "$OPENCLAW_STATE_DIR" "$OPENCLAW_WORKSPACE_DIR" "$OPENCLAW_WORKSPACE_DIR/shared"
 
 # Decrypt configuration if ENCRYPTION_KEY is set
 if [ -n "$ENCRYPTION_KEY" ] && [ -f "${OPENCLAW_CONFIG_PATH}.enc" ]; then
     echo "Decrypting configuration..."
-    node /app/encrypt-utils.js decrypt "$OPENCLAW_CONFIG_PATH.enc" "$OPENCLAW_CONFIG_PATH"
+    node /app/encrypt-utils.js decrypt "$OPENCLAW_CONFIG_PATH.enc" "$OPENCLAW_CONFIG_PATH" || {
+        echo "ERROR: Failed to decrypt config"
+        exit 1
+    }
 fi
 
-# Generate/merge config from environment variables (this writes plaintext then re-encrypts)
-node /app/configurator.js
+# Generate/merge config from environment variables
+node /app/configurator.js || {
+    echo "ERROR: configurator.js failed"
+    exit 1
+}
 
 # Re-encrypt config if ENCRYPTION_KEY is set
 if [ -n "$ENCRYPTION_KEY" ]; then
     echo "Encrypting configuration..."
-    node /app/encrypt-utils.js encrypt "$OPENCLAW_CONFIG_PATH" "$OPENCLAW_CONFIG_PATH.enc"
-    rm -f "$OPENCLAW_CONFIG_PATH"  # remove plaintext
+    node /app/encrypt-utils.js encrypt "$OPENCLAW_CONFIG_PATH" "$OPENCLAW_CONFIG_PATH.enc" || {
+        echo "ERROR: Failed to encrypt config"
+        exit 1
+    }
+    rm -f "$OPENCLAW_CONFIG_PATH"
 fi
 
-# Persistent memory files – unencrypted (workspace data)
+# Persistent memory files – only create if missing
 if [ ! -f "$OPENCLAW_WORKSPACE_DIR/shared/GOALS.md" ]; then
     echo "Initializing memory files (first start)"
     touch "$OPENCLAW_WORKSPACE_DIR/shared/GOALS.md"
