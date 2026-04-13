@@ -39,11 +39,11 @@ RUN set -eux; \
     chmod +x /usr/local/bin/gosu; \
     gosu --version
 
-# Create user/group – use -f to avoid failure if GID 1000 already exists
-RUN groupadd -f -r -g 1000 openclaw && \
-    useradd -r -g openclaw -u 1000 -s /bin/bash -d /app openclaw
-
-RUN mkdir -p /app /data/.openclaw /data/workspace /data/config && \
+# Rename the existing 'node' user to 'openclaw' (UID/GID 1000 remains)
+RUN usermod -d /app -s /bin/bash -l node && \
+    groupmod -n openclaw node && \
+    usermod -l openclaw node && \
+    mkdir -p /app /data/.openclaw /data/workspace /data/config && \
     chown -R openclaw:openclaw /app /data
 
 COPY --from=builder --chown=openclaw:openclaw /build/dist /app/dist
@@ -74,6 +74,8 @@ VOLUME ["/data"]
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8080/healthz || exit 1
+
+USER openclaw
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["/app/start.sh"]
