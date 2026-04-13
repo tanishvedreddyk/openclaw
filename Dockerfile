@@ -39,10 +39,9 @@ RUN set -eux; \
     chmod +x /usr/local/bin/gosu; \
     gosu --version
 
-# Rename the existing 'node' user to 'openclaw' (UID/GID 1000 remains)
-RUN usermod -d /app -s /bin/bash -l node && \
-    groupmod -n openclaw node && \
-    usermod -l openclaw node && \
+# Rename existing 'node' group to 'openclaw' and rename user to 'openclaw'
+RUN groupmod -n openclaw node && \
+    usermod -d /app -s /bin/bash -l openclaw node && \
     mkdir -p /app /data/.openclaw /data/workspace /data/config && \
     chown -R openclaw:openclaw /app /data
 
