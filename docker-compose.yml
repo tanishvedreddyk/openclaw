@@ -5,13 +5,14 @@ services:
     build: .
     container_name: openclaw
     ports:
-      - "8080:18789"   # Map host 8080 to container 18789
+      - "8080:18789"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - OPENCLAW_GATEWAY_PASSWORD=${WEBUI_PASSWORD:?error: WEBUI_PASSWORD is required}
-      - OPENCLAW_GATEWAY_BIND=lan
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
       - OPENCLAW_GATEWAY_PORT=18789
+      - OPENCLAW_GATEWAY_BIND=lan
+      - OPENCLAW_GATEWAY_PASSWORD=${WEBUI_PASSWORD:?error: WEBUI_PASSWORD is required}
       - OPENCLAW_PRIMARY_MODEL=${OPENCLAW_PRIMARY_MODEL:-anthropic/claude-sonnet-4-5-latest}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
