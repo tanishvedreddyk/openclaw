@@ -15,7 +15,7 @@ echo "Running as user: $(id -u)"
 
 mkdir -p "$OPENCLAW_STATE_DIR" "$OPENCLAW_WORKSPACE_DIR" "$OPENCLAW_WORKSPACE_DIR/shared"
 
-# Decrypt configuration if needed
+# Decrypt configuration if ENCRYPTION_KEY is set
 if [ -n "$ENCRYPTION_KEY" ] && [ -f "${OPENCLAW_CONFIG_PATH}.enc" ]; then
     echo "Decrypting configuration..."
     node /app/encrypt-utils.js decrypt "$OPENCLAW_CONFIG_PATH.enc" "$OPENCLAW_CONFIG_PATH" || {
@@ -24,13 +24,13 @@ if [ -n "$ENCRYPTION_KEY" ] && [ -f "${OPENCLAW_CONFIG_PATH}.enc" ]; then
     }
 fi
 
-# Generate/merge config
+# Generate/merge config from environment variables
 node /app/configurator.js || {
     echo "ERROR: configurator.js failed"
     exit 1
 }
 
-# Re-encrypt config if key set
+# Re-encrypt config if ENCRYPTION_KEY is set
 if [ -n "$ENCRYPTION_KEY" ]; then
     echo "Encrypting configuration..."
     node /app/encrypt-utils.js encrypt "$OPENCLAW_CONFIG_PATH" "$OPENCLAW_CONFIG_PATH.enc" || {
@@ -40,7 +40,7 @@ if [ -n "$ENCRYPTION_KEY" ]; then
     rm -f "$OPENCLAW_CONFIG_PATH"
 fi
 
-# Initialize memory files only if missing
+# Persistent memory files – only create if missing
 if [ ! -f "$OPENCLAW_WORKSPACE_DIR/shared/GOALS.md" ]; then
     echo "Initializing memory files (first start)"
     touch "$OPENCLAW_WORKSPACE_DIR/shared/GOALS.md"
@@ -51,7 +51,7 @@ else
     echo "Memory files already exist – preserving previous state"
 fi
 
-# Custom router / models (encrypt if key set)
+# Copy custom router / models (encrypt if key set)
 if [ -f "/data/config/router.js" ]; then
     cp /data/config/router.js "$OPENCLAW_STATE_DIR/router.js"
     echo "Custom router.js loaded"
@@ -68,6 +68,11 @@ if [ -f "/data/config/models.json" ]; then
         node /app/encrypt-utils.js encrypt "$OPENCLAW_STATE_DIR/models.json" "$OPENCLAW_STATE_DIR/models.json.enc"
         rm -f "$OPENCLAW_STATE_DIR/models.json"
     fi
+fi
+
+# Ensure gateway mode is set (env var takes precedence)
+if [ -n "$OPENCLAW_GATEWAY_MODE" ]; then
+    node /app/configurator.js set gateway.mode "$OPENCLAW_GATEWAY_MODE" 2>/dev/null || true
 fi
 
 exec "$@"
