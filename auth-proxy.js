@@ -12,10 +12,10 @@ if (AUTH_ENABLED && !WEBUI_PASSWORD) {
     process.exit(1);
 }
 
-// Simple rate limiting (optional)
+// Rate limiting (30 attempts per IP per minute)
 const rateLimit = new Map();
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 30; // 30 attempts per minute
+const RATE_LIMIT_WINDOW = 60 * 1000;
+const RATE_LIMIT_MAX = 30;
 
 function isRateLimited(ip) {
     const now = Date.now();
@@ -32,8 +32,6 @@ function isRateLimited(ip) {
 }
 
 const proxy = httpProxy.createProxyServer({ target: GATEWAY_URL, changeOrigin: true });
-
-// Handle proxy errors without crashing
 proxy.on('error', (err, req, res) => {
     console.error('Proxy error:', err.message);
     if (!res.headersSent) {
@@ -43,7 +41,6 @@ proxy.on('error', (err, req, res) => {
 });
 
 const server = http.createServer((req, res) => {
-    // Health check endpoint (no auth)
     if (req.url === '/healthz') {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
         res.end('OK');
@@ -68,7 +65,6 @@ const server = http.createServer((req, res) => {
             return;
         }
 
-        // Validate header format
         const parts = authHeader.split(' ');
         if (parts.length !== 2 || parts[0] !== 'Basic') {
             res.writeHead(400, { 'Content-Type': 'text/plain' });
@@ -102,7 +98,6 @@ const server = http.createServer((req, res) => {
     }
 
     proxy.web(req, res, {}, (err) => {
-        // This callback handles errors during proxying
         console.error('Proxy request error:', err.message);
         if (!res.headersSent) {
             res.writeHead(502, { 'Content-Type': 'text/plain' });
