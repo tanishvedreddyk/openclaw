@@ -1,4 +1,4 @@
-// ... (everything before parseModels remains same)
+// ... everything above remains unchanged ...
 
 function parseModels(modelsStr) {
     if (!modelsStr) return [];
