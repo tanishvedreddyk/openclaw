@@ -5,18 +5,14 @@ services:
     build: .
     container_name: openclaw
     ports:
-      - "8080:8080"
+      - "8080:18789"   # Map host 8080 to container 18789
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
+      - OPENCLAW_GATEWAY_PASSWORD=${WEBUI_PASSWORD:?error: WEBUI_PASSWORD is required}
+      - OPENCLAW_GATEWAY_BIND=lan
       - OPENCLAW_GATEWAY_PORT=18789
-      - OPENCLAW_GATEWAY_BIND=127.0.0.1
-      - OPENCLAW_MODELS_MODE=merge
       - OPENCLAW_PRIMARY_MODEL=${OPENCLAW_PRIMARY_MODEL:-anthropic/claude-sonnet-4-5-latest}
-      - AUTH_ENABLED=${AUTH_ENABLED:-true}
-      - WEBUI_USERNAME=${WEBUI_USERNAME:-admin}
-      - WEBUI_PASSWORD=${WEBUI_PASSWORD:?error: WEBUI_PASSWORD is required}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
@@ -27,19 +23,11 @@ services:
       - ./config:/data/config:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      test: ["CMD", "curl", "-f", "http://localhost:18789/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 4G
-        reservations:
-          cpus: '1'
-          memory: 2G
 
 volumes:
   openclaw-data:
