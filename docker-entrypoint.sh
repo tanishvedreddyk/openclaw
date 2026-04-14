@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Fix permissions only if running as root and /data exists and is owned by root
+# Fix permissions only if running as root and /data is owned by root
 if [ "$(id -u)" = "0" ]; then
     if [ -d "/data" ] && [ "$(stat -c %u /data)" = "0" ]; then
         echo "Fixing permissions on /data (running as root)"
@@ -15,7 +15,7 @@ echo "Running as user: $(id -u)"
 
 mkdir -p "$OPENCLAW_STATE_DIR" "$OPENCLAW_WORKSPACE_DIR" "$OPENCLAW_WORKSPACE_DIR/shared"
 
-# Decrypt configuration if ENCRYPTION_KEY is set
+# Decrypt configuration if needed
 if [ -n "$ENCRYPTION_KEY" ] && [ -f "${OPENCLAW_CONFIG_PATH}.enc" ]; then
     echo "Decrypting configuration..."
     node /app/encrypt-utils.js decrypt "$OPENCLAW_CONFIG_PATH.enc" "$OPENCLAW_CONFIG_PATH" || {
@@ -24,13 +24,13 @@ if [ -n "$ENCRYPTION_KEY" ] && [ -f "${OPENCLAW_CONFIG_PATH}.enc" ]; then
     }
 fi
 
-# Generate/merge config from environment variables
+# Generate/merge config
 node /app/configurator.js || {
     echo "ERROR: configurator.js failed"
     exit 1
 }
 
-# Re-encrypt config if ENCRYPTION_KEY is set
+# Re-encrypt config if key set
 if [ -n "$ENCRYPTION_KEY" ]; then
     echo "Encrypting configuration..."
     node /app/encrypt-utils.js encrypt "$OPENCLAW_CONFIG_PATH" "$OPENCLAW_CONFIG_PATH.enc" || {
@@ -40,7 +40,7 @@ if [ -n "$ENCRYPTION_KEY" ]; then
     rm -f "$OPENCLAW_CONFIG_PATH"
 fi
 
-# Persistent memory files – only create if missing
+# Initialize memory files only if missing
 if [ ! -f "$OPENCLAW_WORKSPACE_DIR/shared/GOALS.md" ]; then
     echo "Initializing memory files (first start)"
     touch "$OPENCLAW_WORKSPACE_DIR/shared/GOALS.md"
@@ -51,7 +51,7 @@ else
     echo "Memory files already exist – preserving previous state"
 fi
 
-# Copy custom router / models (also encrypt if key present)
+# Custom router / models (encrypt if key set)
 if [ -f "/data/config/router.js" ]; then
     cp /data/config/router.js "$OPENCLAW_STATE_DIR/router.js"
     echo "Custom router.js loaded"
