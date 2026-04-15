@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
-const { encryptFile, decryptFile } = require('./encrypt-utils');
+const { encryptFile, decryptFile } = require('./encrypt-utils.cjs');
 
 const CONFIG_PATH = process.env.OPENCLAW_CONFIG_PATH || '/data/.openclaw/openclaw.json';
 const STATE_DIR = process.env.OPENCLAW_STATE_DIR || '/data/.openclaw';
