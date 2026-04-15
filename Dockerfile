@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Pin to a specific release (change as needed)
 ARG OPENCLAW_VERSION=v2026.4.12
 WORKDIR /build
 RUN git clone --depth 1 --branch ${OPENCLAW_VERSION} https://github.com/openclaw/openclaw.git . \
@@ -28,7 +27,6 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Install gosu with retry for keyserver
 RUN set -eux; \
     GOSU_VERSION=1.17; \
     dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
@@ -43,7 +41,6 @@ RUN set -eux; \
     chmod +x /usr/local/bin/gosu; \
     gosu --version
 
-# Rename existing 'node' user to 'openclaw'
 RUN groupmod -n openclaw node && \
     usermod -d /app -s /bin/bash -l openclaw node && \
     mkdir -p /app /data/.openclaw /data/workspace /data/config && \
@@ -53,9 +50,10 @@ COPY --from=builder --chown=openclaw:openclaw /build/dist /app/dist
 COPY --from=builder --chown=openclaw:openclaw /build/package*.json /app/
 COPY --from=builder --chown=openclaw:openclaw /build/node_modules /app/node_modules
 
+# Copy scripts (now .cjs files)
 COPY --chown=openclaw:openclaw docker-entrypoint.sh /usr/local/bin/
-COPY --chown=openclaw:openclaw configurator.js /app/
-COPY --chown=openclaw:openclaw encrypt-utils.js /app/
+COPY --chown=openclaw:openclaw configurator.cjs /app/
+COPY --chown=openclaw:openclaw encrypt-utils.cjs /app/
 
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
