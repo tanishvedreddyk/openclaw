@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OpenClaw</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"/>
+<style>
+  :root {
+    --bg:       #0d0d12;
+    --bg2:      #13131b;
+    --bg3:      #1a1a26;
+    --border:   #2a2a3d;
+    --accent:   #7c6af7;
+    --accent2:  #a78bfa;
+    --text:     #e2e2f0;
+    --text2:    #9090aa;
+    --user-bg:  #1e1b4b;
+    --bot-bg:   #13131b;
+    --green:    #4ade80;
+    --red:      #f87171;
+    --yellow:   #fbbf24;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background:var(--bg); color:var(--text); height:100vh; display:flex; overflow:hidden; }
+
+  /* ── Sidebar ─────────────────────────────────────── */
+  #sidebar {
+    width: 260px; min-width:260px; background:var(--bg2);
+    border-right:1px solid var(--border); display:flex; flex-direction:column;
+    padding:0; overflow:hidden;
+  }
+  .logo {
+    padding:20px 18px 16px;
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:10px;
+  }
+  .logo-icon {
+    width:36px; height:36px; background:linear-gradient(135deg,var(--accent),var(--accent2));
+    border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-size:18px; flex-shrink:0;
+  }
+  .logo-text { font-size:18px; font-weight:700; letter-spacing:-.3px; }
+  .logo-sub  { font-size:11px; color:var(--text2); margin-top:1px; }
+
+  .sidebar-section { padding:14px 16px 6px; font-size:11px; font-weight:600; color:var(--text2); letter-spacing:.5px; text-transform:uppercase; }
+
+  .model-select {
+    margin:0 12px 12px; background:var(--bg3); border:1px solid var(--border);
+    color:var(--text); padding:8px 10px; border-radius:8px; font-size:13px; cursor:pointer;
+    width:calc(100% - 24px);
+  }
+  .model-select:focus { outline:none; border-color:var(--accent); }
+
+  .platform-list { padding:0 12px; flex:1; overflow-y:auto; }
+  .platform-item {
+    display:flex; align-items:center; gap:9px; padding:9px 10px;
+    border-radius:8px; margin-bottom:4px; font-size:13px; cursor:default;
+  }
+  .platform-item .dot {
+    width:8px; height:8px; border-radius:50%; flex-shrink:0;
+  }
+  .dot-green  { background:var(--green); box-shadow:0 0 6px var(--green); }
+  .dot-yellow { background:var(--yellow); box-shadow:0 0 6px var(--yellow); }
+  .dot-grey   { background:#444; }
+
+  .new-chat-btn {
+    margin:12px; padding:10px; background:var(--accent);
+    color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600;
+    cursor:pointer; transition:opacity .15s;
+  }
+  .new-chat-btn:hover { opacity:.85; }
+
+  .sidebar-footer {
+    padding:12px 16px; border-top:1px solid var(--border); font-size:11px; color:var(--text2);
+    line-height:1.6;
+  }
+
+  /* ── Main area ───────────────────────────────────── */
+  #main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+  #topbar {
+    padding:14px 20px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--bg2);
+  }
+  #topbar .title { font-weight:600; font-size:15px; }
+  #topbar .status { font-size:12px; color:var(--text2); display:flex; align-items:center; gap:6px; }
+  #topbar .status .dot { width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green); }
+
+  /* ── Messages ────────────────────────────────────── */
+  #messages {
+    flex:1; overflow-y:auto; padding:24px 0; scroll-behavior:smooth;
+  }
+  #messages::-webkit-scrollbar { width:5px; }
+  #messages::-webkit-scrollbar-track { background:transparent; }
+  #messages::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+  .msg-row {
+    display:flex; padding:6px 24px; gap:14px; max-width:900px; margin:0 auto;
+    width:100%;
+  }
+  .msg-row.user { flex-direction:row-reverse; }
+  .avatar {
+    width:32px; height:32px; border-radius:50%; flex-shrink:0; font-size:14px;
+    display:flex; align-items:center; justify-content:center; margin-top:2px;
+  }
+  .avatar.bot  { background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+  .avatar.user { background:var(--user-bg); border:1px solid var(--border); }
+  .bubble {
+    max-width:72%; padding:12px 16px; border-radius:14px; font-size:14px;
+    line-height:1.65; word-break:break-word;
+  }
+  .bubble.bot  { background:var(--bot-bg); border:1px solid var(--border); border-top-left-radius:4px; }
+  .bubble.user { background:var(--user-bg); border:1px solid #2e2a6e; border-top-right-radius:4px; }
+
+  /* Markdown inside bubble */
+  .bubble p  { margin:.25em 0; }
+  .bubble h1,.bubble h2,.bubble h3 { margin:.6em 0 .25em; color:var(--accent2); }
+  .bubble ul,.bubble ol { padding-left:1.4em; margin:.3em 0; }
+  .bubble code:not(pre code) {
+    background:#1e1e2e; padding:.15em .4em; border-radius:4px; font-size:12.5px;
+    font-family:'Courier New',monospace; color:#c4b5fd;
+  }
+  .bubble pre {
+    background:#0a0a12; border:1px solid var(--border); border-radius:8px;
+    padding:12px; overflow-x:auto; margin:.6em 0; font-size:12.5px;
+  }
+  .bubble pre code { background:none; padding:0; color:inherit; }
+  .bubble a { color:var(--accent2); }
+  .bubble blockquote { border-left:3px solid var(--accent); padding-left:10px; color:var(--text2); }
+  .bubble table { border-collapse:collapse; width:100%; margin:.4em 0; font-size:13px; }
+  .bubble th,.bubble td { border:1px solid var(--border); padding:6px 10px; }
+  .bubble th { background:var(--bg3); }
+
+  .typing-dots { display:flex; gap:4px; align-items:center; padding:4px 0; }
+  .typing-dots span {
+    width:6px; height:6px; background:var(--accent); border-radius:50%;
+    animation:bounce .9s infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay:.15s; }
+  .typing-dots span:nth-child(3) { animation-delay:.3s; }
+  @keyframes bounce { 0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)} }
+
+  /* ── Input area ──────────────────────────────────── */
+  #input-area {
+    padding:16px 24px; border-top:1px solid var(--border); background:var(--bg2);
+    max-width:900px; width:100%; margin:0 auto; align-self:center; box-sizing:border-box;
+    width:100%;
+  }
+  #input-wrap {
+    display:flex; gap:10px; align-items:flex-end;
+    background:var(--bg3); border:1px solid var(--border); border-radius:12px;
+    padding:10px 12px; transition:border-color .15s;
+  }
+  #input-wrap:focus-within { border-color:var(--accent); }
+  #user-input {
+    flex:1; background:none; border:none; outline:none; color:var(--text);
+    font-size:14px; line-height:1.5; resize:none; max-height:160px;
+    font-family:inherit;
+  }
+  #user-input::placeholder { color:var(--text2); }
+  #send-btn {
+    width:36px; height:36px; background:var(--accent); border:none; border-radius:8px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:opacity .15s;
+  }
+  #send-btn:hover { opacity:.85; }
+  #send-btn svg { fill:#fff; }
+  #send-btn:disabled { opacity:.4; cursor:default; }
+  .hint { font-size:11px; color:var(--text2); text-align:center; margin-top:8px; }
+
+  /* ── Empty state ─────────────────────────────────── */
+  #empty-state {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    flex:1; gap:16px; padding:40px;
+  }
+  #empty-state .big-icon {
+    width:64px;height:64px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+    border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:32px;
+  }
+  #empty-state h2 { font-size:22px; font-weight:700; }
+  #empty-state p  { color:var(--text2); font-size:14px; text-align:center; max-width:380px; line-height:1.6; }
+  .quick-prompts { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:8px; }
+  .qp {
+    padding:8px 14px; background:var(--bg3); border:1px solid var(--border);
+    border-radius:20px; font-size:13px; cursor:pointer; transition:border-color .15s;
+  }
+  .qp:hover { border-color:var(--accent); color:var(--accent2); }
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<div id="sidebar">
+  <div class="logo">
+    <div class="logo-icon">🐾</div>
+    <div>
+      <div class="logo-text">OpenClaw</div>
+      <div class="logo-sub">AI Assistant</div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">Model</div>
+  <select class="model-select" id="model-select">
+    <option value="">Loading models…</option>
+  </select>
+
+  <div class="sidebar-section">Platforms</div>
+  <div class="platform-list" id="platform-list">
+    <div class="platform-item"><div class="dot dot-green"></div>Web Chat</div>
+    <div class="platform-item" id="pl-discord"><div class="dot dot-grey"></div>Discord</div>
+    <div class="platform-item" id="pl-slack"><div class="dot dot-grey"></div>Slack</div>
+    <div class="platform-item" id="pl-telegram"><div class="dot dot-grey"></div>Telegram</div>
+    <div class="platform-item" id="pl-whatsapp"><div class="dot dot-grey"></div>WhatsApp</div>
+  </div>
+
+  <button class="new-chat-btn" onclick="newChat()">＋ New Chat</button>
+
+  <div class="sidebar-footer">
+    <strong>OpenClaw v1.0</strong><br/>
+    ghcr.io/tanishvedreddyk/openclaw<br/>
+    Root · Unrestricted · Skill-Ready
+  </div>
+</div>
+
+<!-- ── Main ── -->
+<div id="main">
+  <div id="topbar">
+    <div class="title">Chat</div>
+    <div class="status" id="ws-status">
+      <div class="dot" id="status-dot"></div>
+      <span id="status-text">Connecting…</span>
+    </div>
+  </div>
+
+  <div id="messages">
+    <div id="empty-state">
+      <div class="big-icon">🐾</div>
+      <h2>OpenClaw is ready</h2>
+      <p>A powerful, unrestricted AI assistant with web search, code execution, file ops, and more.</p>
+      <div class="quick-prompts">
+        <div class="qp" onclick="sendQuick(this)">Search the web for latest AI news</div>
+        <div class="qp" onclick="sendQuick(this)">Write and run a Python script</div>
+        <div class="qp" onclick="sendQuick(this)">Show system info</div>
+        <div class="qp" onclick="sendQuick(this)">What can you do?</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="input-area">
+    <div id="input-wrap">
+      <textarea id="user-input" rows="1" placeholder="Message OpenClaw…"></textarea>
+      <button id="send-btn" onclick="sendMessage()" title="Send">
+        <svg width="16" height="16" viewBox="0 0 24 24"><path d="M2 21L23 12 2 3v7l15 2-15 2z"/></svg>
+      </button>
+    </div>
+    <div class="hint">Enter to send · Shift+Enter for new line</div>
+  </div>
+</div>
+
+<script>
+const SESSION_ID = crypto.randomUUID();
+let ws = null;
+let connected = false;
+let botBubble = null;
+let botContent = "";
+let isStreaming = false;
+
+// ── WebSocket ────────────────────────────────────────────────────────────────
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws/${SESSION_ID}`);
+
+  ws.onopen = () => {
+    connected = true;
+    setStatus(true);
+    loadModels();
+  };
+
+  ws.onclose = () => {
+    connected = false;
+    setStatus(false);
+    setTimeout(connect, 3000);
+  };
+
+  ws.onerror = () => {
+    connected = false;
+    setStatus(false);
+  };
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'token') {
+      if (!botBubble) createBotBubble();
+      botContent += msg.content;
+      renderBotBubble();
+    } else if (msg.type === 'done') {
+      isStreaming = false;
+      document.getElementById('send-btn').disabled = false;
+      botBubble = null; botContent = "";
+      scrollBottom();
+    } else if (msg.type === 'error') {
+      if (!botBubble) createBotBubble();
+      botContent += `\n\n⚠️ Error: ${msg.content}`;
+      renderBotBubble();
+      isStreaming = false;
+      document.getElementById('send-btn').disabled = false;
+    }
+  };
+}
+
+function setStatus(ok) {
+  document.getElementById('status-dot').style.background = ok ? 'var(--green)' : 'var(--red)';
+  document.getElementById('status-dot').style.boxShadow = ok ? '0 0 5px var(--green)' : '0 0 5px var(--red)';
+  document.getElementById('status-text').textContent = ok ? 'Connected' : 'Reconnecting…';
+}
+
+// ── Models ───────────────────────────────────────────────────────────────────
+async function loadModels() {
+  try {
+    const r = await fetch('/api/models');
+    const d = await r.json();
+    const sel = document.getElementById('model-select');
+    sel.innerHTML = d.models.map(m => `<option value="${m}">${m}</option>`).join('');
+    if (!d.models.length) sel.innerHTML = '<option value="">Default model</option>';
+  } catch(e) {
+    document.getElementById('model-select').innerHTML = '<option value="">Default model</option>';
+  }
+}
+
+// ── Messaging ────────────────────────────────────────────────────────────────
+function sendMessage() {
+  const inp = document.getElementById('user-input');
+  const txt = inp.value.trim();
+  if (!txt || !connected || isStreaming) return;
+
+  // Hide empty state
+  const es = document.getElementById('empty-state');
+  if (es) es.remove();
+
+  addMessage(txt, 'user');
+  inp.value = '';
+  inp.style.height = 'auto';
+
+  const model = document.getElementById('model-select').value;
+  ws.send(JSON.stringify({ message: txt, model }));
+
+  isStreaming = true;
+  document.getElementById('send-btn').disabled = true;
+
+  // Show typing indicator briefly
+  createBotBubble(true);
+}
+
+function sendQuick(el) {
+  document.getElementById('user-input').value = el.textContent;
+  sendMessage();
+}
+
+function newChat() {
+  location.reload();
+}
+
+function addMessage(text, role) {
+  const msgs = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = `msg-row ${role}`;
+  const av = document.createElement('div');
+  av.className = `avatar ${role}`;
+  av.textContent = role === 'user' ? '👤' : '🐾';
+  const bub = document.createElement('div');
+  bub.className = `bubble ${role}`;
+  if (role === 'user') {
+    bub.textContent = text;
+  } else {
+    bub.innerHTML = marked.parse(text || '');
+    bub.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
+  }
+  row.appendChild(av);
+  row.appendChild(bub);
+  msgs.appendChild(row);
+  scrollBottom();
+  return bub;
+}
+
+function createBotBubble(typing = false) {
+  const msgs = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = 'msg-row';
+  row.id = 'bot-row';
+  const av = document.createElement('div');
+  av.className = 'avatar bot';
+  av.textContent = '🐾';
+  const bub = document.createElement('div');
+  bub.className = 'bubble bot';
+  bub.id = 'bot-bubble';
+  if (typing) {
+    bub.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+  }
+  row.appendChild(av);
+  row.appendChild(bub);
+  msgs.appendChild(row);
+  botBubble = bub;
+  scrollBottom();
+}
+
+function renderBotBubble() {
+  if (!botBubble) return;
+  const cursor = isStreaming ? '<span style="opacity:.5;animation:blink 1s infinite">▌</span>' : '';
+  botBubble.innerHTML = marked.parse(botContent) + cursor;
+  botBubble.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
+  scrollBottom();
+}
+
+function scrollBottom() {
+  const m = document.getElementById('messages');
+  m.scrollTop = m.scrollHeight;
+}
+
+// ── Input auto-resize + Enter key ────────────────────────────────────────────
+const inp = document.getElementById('user-input');
+inp.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+});
+inp.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// ── Platform status polling ───────────────────────────────────────────────────
+async function pollPlatforms() {
+  // Platforms are indicated by env-based status — we ping health
+  // In a real multi-process setup you'd query each bot's health
+  try {
+    const r = await fetch('/api/health');
+    if (r.ok) setStatus(true);
+  } catch(e) {}
+}
+setInterval(pollPlatforms, 15000);
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+connect();
+marked.setOptions({ breaks: true, gfm: true });
+</script>
+</body>
+</html>
