@@ -1,0 +1,9 @@
+.env
+auth_state/
+workspace/
+bots/whatsapp/node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.log
