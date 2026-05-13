@@ -14,26 +14,19 @@ services:
       - ./auth_state:/app/bots/whatsapp/auth_state  # WhatsApp session
     environment:
       # ── LLM Provider ──────────────────────────────────────────────────────
-      # Option 1: Ollama (local, bundled)
-      OLLAMA_ENABLED: "true"
-      LLM_PROVIDER:   "ollama"
-      LLM_BASE_URL:   "http://localhost:11434/v1"
-      LLM_API_KEY:    "ollama"
-      LLM_MODEL:      "llama3.2"
+      # Option 1: OpenAI
+      LLM_PROVIDER:  "openai"
+      LLM_BASE_URL:  "https://api.openai.com/v1"
+      LLM_API_KEY:   "sk-..."
+      LLM_MODEL:     "gpt-4o"
 
-      # Option 2: OpenAI
-      # LLM_PROVIDER:  "openai"
-      # LLM_BASE_URL:  "https://api.openai.com/v1"
-      # LLM_API_KEY:   "sk-..."
-      # LLM_MODEL:     "gpt-4o"
-
-      # Option 3: Nvidia NIM
+      # Option 2: Nvidia NIM
       # LLM_PROVIDER:  "nvidia"
       # LLM_BASE_URL:  "https://integrate.api.nvidia.com/v1"
       # LLM_API_KEY:   "nvapi-..."
       # LLM_MODEL:     "meta/llama-3.1-70b-instruct"
 
-      # Option 4: Any OpenAI-compatible API
+      # Option 3: Any OpenAI-compatible API
       # LLM_PROVIDER:  "custom"
       # LLM_BASE_URL:  "https://your-endpoint/v1"
       # LLM_API_KEY:   "your-key"
