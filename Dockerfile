@@ -1,7 +1,8 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # OpenClaw — ghcr.io/tanishvedreddyk/openclaw
-# Ubuntu 24.04 · Python 3.12 · Node.js 22 · Ollama pre-installed (not started)
+# Ubuntu 24.04 · Python 3.12 · Node.js 22
 # Runs as root · No permission restrictions
+# LLM backend: set via env vars (OpenAI, Nvidia NIM, or any OpenAI-compatible)
 # ──────────────────────────────────────────────────────────────────────────────
 FROM ubuntu:24.04
 
@@ -30,9 +31,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
-
-# ── Ollama (pre-installed, not started) ───────────────────────────────────────
-RUN curl -fsSL https://ollama.com/install.sh | sh
 
 # ── Python dependencies ───────────────────────────────────────────────────────
 COPY requirements.txt /tmp/requirements.txt
