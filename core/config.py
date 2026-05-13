@@ -2,10 +2,10 @@ import os
 
 class Config:
     # ── LLM ──────────────────────────────────────────────────
-    LLM_PROVIDER   = os.getenv("LLM_PROVIDER",   "ollama")          # ollama | openai | nvidia | custom
-    LLM_BASE_URL   = os.getenv("LLM_BASE_URL",   "http://localhost:11434/v1")
-    LLM_API_KEY    = os.getenv("LLM_API_KEY",    "ollama")
-    LLM_MODEL      = os.getenv("LLM_MODEL",      "llama3.2")
+    LLM_PROVIDER   = os.getenv("LLM_PROVIDER",   "openai")          # openai | nvidia | custom
+    LLM_BASE_URL   = os.getenv("LLM_BASE_URL",   "https://api.openai.com/v1")
+    LLM_API_KEY    = os.getenv("LLM_API_KEY",    "")
+    LLM_MODEL      = os.getenv("LLM_MODEL",      "gpt-4o")
     LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "2048"))
     LLM_TEMPERATURE= float(os.getenv("LLM_TEMPERATURE", "0.7"))
 
