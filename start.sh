@@ -5,21 +5,6 @@ echo "======================================"
 echo "   🐾 OpenClaw Starting Up"
 echo "======================================"
 
-# ── Optional: start Ollama ────────────────────────────────────────────────────
-if [ "${OLLAMA_ENABLED}" = "true" ]; then
-  echo "[startup] Starting Ollama service…"
-  ollama serve &
-  sleep 3
-
-  MODEL="${LLM_MODEL:-llama3.2}"
-  echo "[startup] Pulling model: $MODEL"
-  ollama pull "$MODEL" || echo "[startup] Warning: model pull failed (may already exist)"
-  export LLM_BASE_URL="http://localhost:11434/v1"
-  export LLM_API_KEY="ollama"
-  export LLM_MODEL="$MODEL"
-  echo "[startup] Ollama ready."
-fi
-
 # ── Create workspace ──────────────────────────────────────────────────────────
 mkdir -p /workspace
 echo "[startup] Workspace: /workspace"
